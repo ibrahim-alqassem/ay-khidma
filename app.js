@@ -269,8 +269,8 @@ let tiles = null;
 function setTiles() {
   const dark = document.documentElement.getAttribute("data-theme") === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
   if (tiles) map.removeLayer(tiles);
-  tiles = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "voyager"}/{z}/{x}/{y}{r}.png`, {
-    maxZoom: 19, subdomains: "abcd", attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+  tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, className: dark ? "tiles-dark" : "", attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 }
 function initMap() {
@@ -420,7 +420,7 @@ function providerSetup() {
     </form>`, m => {
     const mini = L.map(m.querySelector("#mini"), { zoomControl: true, attributionControl: false }).setView(pos, 15);
     const dark = getComputedStyle(document.documentElement).colorScheme === "dark";
-    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "voyager"}/{z}/{x}/{y}{r}.png`, { subdomains: "abcd", maxZoom: 19 }).addTo(mini);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, className: dark ? "tiles-dark" : "" }).addTo(mini);
     setTimeout(() => mini.invalidateSize(), 250);
     m.querySelector("#sGps").onclick = () => navigator.geolocation?.getCurrentPosition(g => { myPos = [g.coords.latitude, g.coords.longitude]; store.set("pos", myPos); mini.setView(myPos, 16); }, () => toast("اسمح بالوصول لموقعك من إعدادات المتصفح"));
     const act = m.querySelector("#sActive"); if (act) act.onclick = () => act.setAttribute("aria-checked", act.getAttribute("aria-checked") !== "true");
