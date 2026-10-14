@@ -837,7 +837,16 @@ const isStandalone = () => matchMedia("(display-mode: standalone)").matches || n
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const pushSupported = () => "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
 const pushOn = () => notifyOn && pushSupported() && Notification.permission === "granted";
-function pushLogin() { if (session) OS(async OneSignal => { try { await OneSignal.login(session.user.id); } catch (e) {} }); }
+function pushLogin() {
+  if (!session) return;
+  OS(async OneSignal => {
+    try {
+      await OneSignal.login(session.user.id);
+      // إصلاح تلقائي: إذا كان الإذن ممنوحاً والمستخدم لم يُطفئ الإشعارات بنفسه، نعيد اشتراك الجهاز
+      if (notifyOn && Notification.permission === "granted" && !OneSignal.User.PushSubscription.optedIn) await OneSignal.User.PushSubscription.optIn();
+    } catch (e) {}
+  });
+}
 function pushLogout() { OS(async OneSignal => { try { await OneSignal.logout(); } catch (e) {} }); }
 function enablePush() {
   if (!pushSupported()) {
