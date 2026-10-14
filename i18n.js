@@ -1,6 +1,6 @@
 // الترجمة الإنجليزية — المفتاح هو النص العربي كما يظهر في app.js
 window.I18N_EN = {
-"أي خدمة": "Ay Khidma",
+"أي هلب": "Ay Help",
 "خدمات الطريق والمنزل": "Road & home services",
 "تفاصيل التوصيل": "Delivery details",
 "من أين إلى أين، وما المطلوب توصيله": "From where to where, and what to deliver",

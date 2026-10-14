@@ -1,4 +1,4 @@
-/* أي خدمة — منطق التطبيق */
+/* أي هلب — منطق التطبيق */
 "use strict";
 const C = window.CONFIG;
 const store = {

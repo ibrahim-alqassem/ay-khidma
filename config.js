@@ -1,6 +1,6 @@
-// إعدادات «أي خدمة» — عدّل هنا فقط
+// إعدادات «أي هلب» — عدّل هنا فقط
 window.CONFIG = {
-  appName: "أي خدمة",
+  appName: "أي هلب",
   tagline: "خدمات الطريق والمنزل",
   supabaseUrl: "https://wkopejvbfkdrzgoyqtpw.supabase.co",
   supabaseKey: "sb_publishable_7ZG1sr99za9BeBX77Qp9Cw_nddy8-vm", // المفتاح العام (publishable) — آمن للمتصفح مع RLS؛ لا تضع المفتاح السري هنا
