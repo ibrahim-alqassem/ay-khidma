@@ -267,3 +267,12 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 [dir="ltr"] .drawer.on{transform:none}
 [dir="ltr"] .unread{box-shadow:inset 3px 0 0 var(--amber)}
 [dir="ltr"] .ltr,[dir="ltr"] .phone input{text-align:left}
+
+/* v6: نافذة الإضافة للشاشة الرئيسية */
+.installhead{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
+.installhead .logoimg{width:60px;height:60px;border-radius:16px}
+.installhead h3{margin-bottom:6px}
+.steps{margin:0 0 16px;padding-inline-start:22px;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.steps li::marker{color:var(--brand);font-weight:700}
+.kbd{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--brand-soft);color:var(--brand);vertical-align:middle}
+.kbd svg{width:18px;height:18px}

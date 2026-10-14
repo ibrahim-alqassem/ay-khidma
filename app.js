@@ -110,7 +110,7 @@ const mins = s => { const [h, m] = String(s).split(":").map(Number); return h * 
 function fmtTime(s) { const d = new Date(2000, 0, 1, ...String(s).split(":").map(Number)); return d.toLocaleTimeString(LOC, { hour: "numeric", minute: "2-digit" }); }
 function hoursText(h) {
   if (!h) return "";
-  if (h === "24") return t("متاح ٢٤ ساعة");
+  if (h === "24") return t("متوفر ٢٤ ساعة");
   const [a, b] = h.split("-");
   return t("من {a} إلى {b}", { a: fmtTime(a), b: fmtTime(b) });
 }
@@ -120,7 +120,7 @@ function openNow(h) {
   const [a, b] = h.split("-").map(mins), d = new Date(), n = d.getHours() * 60 + d.getMinutes();
   return a <= b ? (n >= a && n < b) : (n >= a || n < b);
 }
-const openPill = h => { const o = openNow(h); return o === null ? "" : `<span class="pill ${o ? "done" : "bad"}">${o ? t("مفتوح الآن") : t("مغلق الآن")}</span>`; };
+const openPill = h => { const o = openNow(h); return o === null ? "" : `<span class="pill ${o ? "done" : "bad"}">${o ? t("متوفر الآن") : t("غير متوفر الآن")}</span>`; };
 const priceHint = () => `<p class="pricehint">${ico("tag")}<span>${t("السعر يُتفق عليه مباشرة مع مقدم الخدمة حسب الموقع والمسافة ونوع العمل.")}</span></p>`;
 
 /* ===== الحالة ===== */
@@ -130,7 +130,6 @@ let providers = [], myReqs = [], inReqs = [], notes = [];
 let tab = "home", sheetState = 0, cat = store.get("cat", "road"), filter = null, ordersTab = "mine";
 let map = null, markers = null, meMarker = null, tiles = null, myPos = store.get("pos", null), channel = null;
 let theme = store.get("theme", "system"), notifyOn = store.get("notify", true), deferredInstall = null;
-const KSA = [[16.3, 34.5], [32.2, 55.7]];
 applyTheme();
 
 function isDark() { return theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches); }
@@ -171,6 +170,7 @@ new MutationObserver(() => sync()).observe(app, { childList: true });
 /* ===== البداية ===== */
 async function boot() {
   startShell();
+  maybeInstallPrompt();
   const { data } = await sb.auth.getSession();
   session = data.session;
   if (session) await afterLogin();
@@ -185,6 +185,7 @@ async function afterLogin() {
   renderDrawer(); renderNav(); renderTop();
   if (tab !== "home") renderPage();
   loadRequests(); loadNotes(); subscribe();
+  pushLogin(); setTimeout(maybePushPrompt, 2500);
 }
 async function loadMe() {
   const { data } = await sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
@@ -218,9 +219,6 @@ function subscribe() {
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${session.user.id}` }, p => {
       notes.unshift(p.new); renderNav(); if (tab === "notes") renderPage();
       toast(noteTitle(p.new)); loadRequests();
-      if (notifyOn && "Notification" in window && Notification.permission === "granted" && document.hidden) {
-        try { new Notification(APP, { body: noteTitle(p.new) + (p.new.body ? "\n" + p.new.body : ""), icon: "icon-192.png" }); } catch (e) {}
-      }
     }).subscribe();
 }
 function cleanupRealtime() { if (channel) { sb.removeChannel(channel); channel = null; } }
@@ -382,14 +380,14 @@ function action(a) {
   closeDrawer();
   if (TITLES[a]) return go(a);
   if (a === "mystore") return providerSetup();
-  if (a === "install") return installBox();
+  if (a === "install") return installBox(false);
   if (a === "terms") return termsBox();
   if (a === "share") return shareBox();
   if (a === "lang") return langBox();
   sync();
 }
 async function logout() {
-  cleanupRealtime(); await sb.auth.signOut();
+  cleanupRealtime(); pushLogout(); await sb.auth.signOut();
   session = null; me = null; notes = []; myReqs = []; inReqs = [];
   go("home"); toast(t("تم تسجيل الخروج"));
 }
@@ -403,7 +401,7 @@ function setTiles() {
 }
 function initMap() {
   map = L.map("map", { zoomControl: false, attributionControl: true });
-  if (myPos) map.setView(myPos, 13); else map.fitBounds(KSA);
+  map.setView(myPos || [24.7136, 46.6753], myPos ? 14 : 12);
   map.attributionControl.setPrefix(false);
   setTiles();
   markers = L.layerGroup().addTo(map);
@@ -433,7 +431,7 @@ function locate(user) {
   if (!navigator.geolocation) { if (user) toast(t("المتصفح لا يدعم تحديد الموقع")); return; }
   navigator.geolocation.getCurrentPosition(p => {
     myPos = [p.coords.latitude, p.coords.longitude]; store.set("pos", myPos); placeMe();
-    if (map) map.setView(myPos, 13); drawMarkers(); if (tab === "home") renderSheet();
+    if (map) map.setView(myPos, 14); drawMarkers(); if (tab === "home") renderSheet();
   }, () => { if (user) toast(t("اسمح للموقع بالوصول لموقعك من إعدادات المتصفح")); }, { enableHighAccuracy: true, timeout: 10000 });
 }
 function placeMe() {
@@ -460,7 +458,7 @@ function renderSheet() {
     const list = shownProviders();
     sub = list.length ? t("{n} مقدم خدمة قريب منك", { n: num(list.length) }) : t("لا يوجد مقدم لهذه الخدمة بعد");
     body = `<button class="back" id="sBack">${ico("back", "i flip")}${t(CATS.find(c => c.id === svc(filter).cat).name)}</button>`
-      + (list.length ? list.map(p => `<button class="svc" data-p="${p.id}"><span class="ic">${ico(svc(filter).icon)}</span><span class="t"><b>${esc(p.name)}</b><span>${[esc(p.district || ""), km(p.dist)].filter(Boolean).join(" · ")}</span></span>${openNow(p.hours) === null ? "" : `<span class="n ${p.open ? "" : "off"}">${p.open ? t("مفتوح") : t("مغلق")}</span>`}${ico("chev", "i flip")}</button>`).join("")
+      + (list.length ? list.map(p => `<button class="svc" data-p="${p.id}"><span class="ic">${ico(svc(filter).icon)}</span><span class="t"><b>${esc(p.name)}</b><span>${[esc(p.district || ""), km(p.dist)].filter(Boolean).join(" · ")}</span></span>${openNow(p.hours) === null ? "" : `<span class="n ${p.open ? "" : "off"}">${p.open ? t("متوفر") : t("غير متوفر")}</span>`}${ico("chev", "i flip")}</button>`).join("")
         : `<p class="none">${t("شارك الموقع مع من يقدّم هذه الخدمة ليسجّل ويظهر هنا.")}</p>`)
       + priceHint();
   } else if (sheetState === 1) { sub = t("اختر نوع الخدمة"); body = cats + join; }
@@ -668,7 +666,7 @@ const PAGES = {
     const th = { system: "تلقائي", light: "فاتح", dark: "داكن" }[theme];
     return `<div class="list">
       <button class="row" data-go="lang"><span class="ic">${ico("lang")}</span><span class="t"><b>${t("اللغة")}</b></span><span class="end accent">${EN ? "English" : "العربية"}</span>${ico("chev", "i flip")}</button>
-      <div class="row"><span class="ic">${ico("bell")}</span><span class="t"><b>${t("الإشعارات")}</b><span>${t("تنبيه على الجهاز عند وصول طلب أو تحديث")}</span></span><button class="sw" role="switch" aria-checked="${notifyOn}" id="notifySw" aria-label="${t("الإشعارات")}"></button></div>
+      <div class="row"><span class="ic">${ico("bell")}</span><span class="t"><b>${t("الإشعارات")}</b><span>${t("تصلك حتى والجوال مقفل")}</span></span><button class="sw" role="switch" aria-checked="${pushOn()}" id="notifySw" aria-label="${t("الإشعارات")}"></button></div>
       <button class="row" id="themeBtn"><span class="ic">${ico("moon")}</span><span class="t"><b>${t("المظهر")}</b></span><span class="end">${t(th)}</span></button>
       <button class="row" data-go="install"><span class="ic">${ico("plus")}</span><span class="t"><b>${t("أضف للشاشة الرئيسية")}</b><span>${t("افتح الموقع كتطبيق بضغطة")}</span></span>${ico("chev", "i flip")}</button>
       <button class="row" data-go="share"><span class="ic">${ico("share")}</span><span class="t"><b>${t("شارك الموقع")}</b><span>${t("أرسل نبذة ورابط الموقع لمن تعرف")}</span></span>${ico("chev", "i flip")}</button>
@@ -711,9 +709,17 @@ const BIND = {
   },
   settings(v) {
     v.querySelector("#notifySw").onclick = async e => {
-      notifyOn = !notifyOn; store.set("notify", notifyOn); e.currentTarget.setAttribute("aria-checked", notifyOn);
-      if (notifyOn && "Notification" in window && Notification.permission === "default") { try { await Notification.requestPermission(); } catch (x) {} }
-      toast(notifyOn ? t("الإشعارات مفعّلة") : t("الإشعارات متوقفة"));
+      const sw = e.currentTarget;
+      if (sw.getAttribute("aria-checked") !== "true") {
+        if (!session) { needLogin(t("سجّل دخولك لتصلك إشعارات طلباتك.")); return; }
+        const ok = await enablePush();
+        notifyOn = ok; store.set("notify", ok); sw.setAttribute("aria-checked", ok);
+        if (ok) toast(t("الإشعارات مفعّلة"));
+      } else {
+        notifyOn = false; store.set("notify", false); sw.setAttribute("aria-checked", false);
+        OS(async OneSignal => { try { await OneSignal.User.PushSubscription.optOut(); } catch (x) {} });
+        toast(t("الإشعارات متوقفة"));
+      }
     };
     v.querySelector("#themeBtn").onclick = () => { theme = { system: "light", light: "dark", dark: "system" }[theme]; store.set("theme", theme); applyTheme(); renderPage(); };
     v.querySelector("#delBtn")?.addEventListener("click", () => confirmBox(t("حذف الحساب"), t("سيُحذف حسابك وخدمتك وطلباتك وإشعاراتك نهائياً، ولا يمكن التراجع."), t("احذف حسابي نهائياً"), async () => {
@@ -795,13 +801,69 @@ function termsBox() {
     <h4>${t("الخصوصية")}</h4><p>${t("نحفظ بريدك واسمك وجوالك. جوال مقدم الخدمة ظاهر للجميع للتواصل. جوالك كعميل يظهر فقط لمقدم الخدمة الذي تطلب منه.")}</p>
     <h4>${t("حذف الحساب")}</h4><p>${t("تستطيع حذف حسابك وكل بياناتك من الإعدادات في أي وقت.")}</p></div><br><button class="btn" data-close>${t("فهمت")}</button>`);
 }
-function installBox() {
-  modal(`<h3>${ico("plus")}${t("أضف «{app}» للشاشة الرئيسية", { app: APP })}</h3><p class="lead">${t("يفتح بعدها مثل التطبيق بدون تحميل من المتجر.")}</p><div class="prose">
-    <h4>${t("آيفون (Safari)")}</h4><p>${t("اضغط زر المشاركة في أسفل الشاشة، ثم «إضافة إلى الشاشة الرئيسية»، ثم «إضافة».")}</p>
-    <h4>${t("أندرويد (Chrome)")}</h4><p>${t("اضغط النقاط الثلاث ⋮ أعلى الشاشة، ثم «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».")}</p>
-    <h4>${t("الكمبيوتر")}</h4><p>${t("في Chrome أو Edge اضغط أيقونة التثبيت في شريط العنوان.")}</p></div><br>
-    ${deferredInstall ? `<button class="btn" id="doInstall">${t("ثبّت الآن")}</button><br>` : ""}<button class="btn ghost" data-close>${t("تم")}</button>`, m => {
-    m.querySelector("#doInstall")?.addEventListener("click", async () => { deferredInstall.prompt(); await deferredInstall.userChoice.catch(() => {}); deferredInstall = null; m.remove(); });
+function installBox(auto) {
+  const ios = isIOS(), android = /android/i.test(navigator.userAgent);
+  const steps = ios
+    ? `<ol class="steps"><li>${t("اضغط زر المشاركة")} <span class="kbd">${ico("share")}</span> ${t("أسفل الشاشة في Safari")}</li><li>${t("اختر «إضافة إلى الشاشة الرئيسية»")}</li><li>${t("اضغط «إضافة»")}</li></ol>`
+    : android && !deferredInstall
+      ? `<ol class="steps"><li>${t("اضغط النقاط الثلاث ⋮ أعلى المتصفح")}</li><li>${t("اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»")}</li></ol>`
+      : deferredInstall ? "" : `<ol class="steps"><li>${t("في Chrome أو Edge اضغط أيقونة التثبيت في شريط العنوان")}</li></ol>`;
+  modal(`<div class="installhead"><img class="logoimg" src="icon-192.png" alt=""><div><h3>${t("أضف «{app}» لشاشتك الرئيسية", { app: APP })}</h3><p class="lead m0">${t("يفتح بضغطة مثل التطبيق، بدون تحميل من المتجر، وتصلك الإشعارات حتى والجوال مقفل.")}</p></div></div>
+    ${steps}
+    <div class="form">${deferredInstall ? `<button class="btn" id="doInstall">${ico("plus")}${t("ثبّت التطبيق الآن")}</button>` : ""}
+    <button class="btn ghost" data-close>${auto ? t("ليس الآن") : t("تم")}</button></div>`, m => {
+    m.classList.add("installbox");
+    m.querySelector("#doInstall")?.addEventListener("click", async () => {
+      const ev = deferredInstall; deferredInstall = null;
+      ev.prompt(); const r = await ev.userChoice.catch(() => null);
+      if (r && r.outcome === "accepted") { store.set("installed", true); m.remove(); }
+    });
+  });
+}
+/* يطلب الإضافة للشاشة الرئيسية عند كل فتح، إلا إذا كان مضافاً */
+async function alreadyInstalled() {
+  if (isStandalone()) { store.set("installed", true); return true; }
+  try { if (navigator.getInstalledRelatedApps) { const r = await navigator.getInstalledRelatedApps(); return r.length > 0; } } catch (e) {}
+  return store.get("installed", false);
+}
+async function maybeInstallPrompt() {
+  if (await alreadyInstalled()) { setTimeout(maybePushPrompt, 1500); return; }
+  setTimeout(() => { if (!app.querySelector(".modal") && !app.querySelector(".authlayer")) installBox(true); }, 1800);
+}
+
+/* ===== الإشعارات الفورية (OneSignal) ===== */
+const OS = fn => { window.OneSignalDeferred = window.OneSignalDeferred || []; window.OneSignalDeferred.push(fn); };
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const pushSupported = () => "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+const pushOn = () => notifyOn && pushSupported() && Notification.permission === "granted";
+function pushLogin() { if (session) OS(async OneSignal => { try { await OneSignal.login(session.user.id); } catch (e) {} }); }
+function pushLogout() { OS(async OneSignal => { try { await OneSignal.logout(); } catch (e) {} }); }
+function enablePush() {
+  if (!pushSupported()) {
+    toast(isIOS() && !isStandalone() ? t("على الآيفون: أضف التطبيق للشاشة الرئيسية أولاً، ثم فعّل الإشعارات من داخله.") : t("هذا المتصفح لا يدعم الإشعارات."));
+    return Promise.resolve(false);
+  }
+  if (Notification.permission === "denied") { toast(t("الإشعارات محظورة لهذا الموقع. فعّلها من إعدادات المتصفح.")); return Promise.resolve(false); }
+  return new Promise(res => {
+    const done = setTimeout(() => res(Notification.permission === "granted"), 15000);
+    OS(async OneSignal => {
+      try {
+        await OneSignal.Notifications.requestPermission();
+        if (Notification.permission === "granted") { await OneSignal.User.PushSubscription.optIn(); pushLogin(); }
+      } catch (e) {}
+      clearTimeout(done); res(Notification.permission === "granted");
+    });
+  });
+}
+let pushAsked = false;
+function maybePushPrompt() {
+  if (pushAsked || !session || !pushSupported() || Notification.permission !== "default") return;
+  if (app.querySelector(".modal") || app.querySelector(".authlayer")) return;
+  pushAsked = true;
+  modal(`<h3>${ico("bell")}${t("فعّل الإشعارات")}</h3><p class="lead">${t("ليصلك الطلب الجديد وتحديثات طلباتك فوراً، حتى والجوال مقفل.")}</p>
+    <div class="form"><button class="btn" id="pushYes">${ico("bell")}${t("فعّل الإشعارات")}</button><button class="btn ghost" data-close>${t("لاحقاً")}</button></div>`, m => {
+    m.querySelector("#pushYes").onclick = async () => { const ok = await enablePush(); notifyOn = ok; store.set("notify", ok); m.remove(); if (ok) toast(t("الإشعارات مفعّلة")); };
   });
 }
 function shareText() {
@@ -870,7 +932,8 @@ function copy(txt) {
 function fallbackCopy(txt) { const a = document.createElement("textarea"); a.value = txt; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); toast(t("تم النسخ")); } catch (e) { toast(txt); } a.remove(); }
 function toast(msg) { const d = document.createElement("div"); d.className = "toast"; d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 2400); }
 
-addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; });
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; if (app.querySelector(".installbox")) installBox(true); });
+addEventListener("appinstalled", () => { store.set("installed", true); deferredInstall = null; app.querySelector(".installbox")?.remove(); toast(t("تمت إضافة التطبيق للشاشة الرئيسية")); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => theme === "system" && applyTheme());
 
 boot().catch(e => { console.error(e); toast(t("تعذّر الاتصال. تحقق من الإنترنت ثم أعد فتح الصفحة.")); });
