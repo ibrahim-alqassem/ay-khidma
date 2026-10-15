@@ -708,6 +708,8 @@ const BIND = {
     v.querySelector("#editProfile")?.addEventListener("click", editProfile);
   },
   settings(v) {
+    // يعكس الحالة الفعلية للاشتراك في OneSignal (وليس إذن المتصفح فقط)
+    OS(async OneSignal => { try { const s = v.querySelector("#notifySw"); if (s) s.setAttribute("aria-checked", pushOn() && !!OneSignal.User.PushSubscription.optedIn); } catch (x) {} });
     v.querySelector("#notifySw").onclick = async e => {
       const sw = e.currentTarget;
       if (sw.getAttribute("aria-checked") !== "true") {
