@@ -61,7 +61,7 @@ const IC = {
   bell: '<path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
-  gps: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+  gps: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><path d="M12 1.8v3.2M12 19v3.2M1.8 12h3.2M19 12h3.2"/>',
   car: '<path d="M3 16v-4l2.5-5h13L21 12v4h-1.5"/><path d="M4 12h16M9.5 16h5"/><circle cx="7" cy="16.5" r="2"/><circle cx="17" cy="16.5" r="2"/>',
   battery: '<rect x="3" y="7" width="16" height="11" rx="2"/><path d="M7 5v2M15 5v2M7 12.5h3M13 12.5h3M14.5 11v3"/>',
   fuel: '<path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M3 21h12M6 9h6"/><path d="M14 11h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/>',
@@ -317,7 +317,7 @@ function startShell() {
     <header class="top"><span id="topStart"></span><h1 id="title"></h1><span id="topEnd"></span></header>
     <main class="view map" id="mapView">
       <div id="map" aria-label="${t("خريطة مقدمي الخدمات")}"></div>
-      <div class="mapbar"><div class="chip grow" id="filterChip" hidden></div><span class="grow" id="spacer"></span><button class="fab" id="locBtn" aria-label="${t("موقعي")}">${ico("gps")}</button></div>
+      <div class="mapbar"><div class="chip grow" id="filterChip" hidden></div><span class="grow" id="spacer"></span><button class="fab locbtn" id="locBtn" aria-label="${t("موقعي")}">${ico("gps")}</button></div>
       <section class="sheet closed" id="sheet" aria-label="${t("الخدمات")}"></section>
     </main>
     <main class="view" id="pageView" hidden></main>
@@ -801,7 +801,8 @@ function termsBox() {
     <h4>${t("دور الموقع")}</h4><p>${t("«{app}» منصة تعرض مقدمي الخدمات وتوصلك بهم. الاتفاق على السعر والوقت وتنفيذ الخدمة بينك وبين مقدم الخدمة مباشرة، ولا يأخذ الموقع أي عمولة.", { app: APP })}</p>
     <h4>${t("مقدمو الخدمة")}</h4><p>${t("يلتزم مقدم الخدمة بصحة بياناته وموقعه وساعات عمله، وبإخفاء خدمته عند عدم توفره.")}</p>
     <h4>${t("الخصوصية")}</h4><p>${t("نحفظ بريدك واسمك وجوالك. جوال مقدم الخدمة ظاهر للجميع للتواصل. جوالك كعميل يظهر فقط لمقدم الخدمة الذي تطلب منه.")}</p>
-    <h4>${t("حذف الحساب")}</h4><p>${t("تستطيع حذف حسابك وكل بياناتك من الإعدادات في أي وقت.")}</p></div><br><button class="btn" data-close>${t("فهمت")}</button>`);
+    <h4>${t("حذف الحساب")}</h4><p>${t("تستطيع حذف حسابك وكل بياناتك من الإعدادات في أي وقت.")}</p>
+    <p><a href="privacy.html" target="_blank" rel="noopener">${t("سياسة الخصوصية كاملة")}</a> · <a href="delete-account.html" target="_blank" rel="noopener">${t("حذف الحساب")}</a></p></div><br><button class="btn" data-close>${t("فهمت")}</button>`);
 }
 function installBox(auto) {
   const ios = isIOS(), android = /android/i.test(navigator.userAgent);

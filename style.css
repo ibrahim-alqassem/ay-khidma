@@ -55,6 +55,9 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .chip{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 12px;box-shadow:0 6px 20px rgba(10,40,44,.1);font-size:14px;font-weight:600;min-width:0}
 .chip.grow{flex:1}
 .chip .x{color:var(--muted)}
+.fab.locbtn{width:50px;height:50px;border-radius:8px;border:none;background:var(--surface);color:var(--brand);box-shadow:0 1px 4px rgba(0,0,0,.18),0 4px 14px rgba(10,40,44,.10)}
+.fab.locbtn .i{width:28px;height:28px;stroke-width:2}
+.fab.locbtn:active{filter:brightness(.95)}
 .fab{width:46px;height:46px;border-radius:14px;background:var(--surface);color:var(--brand);border:1px solid var(--line);display:grid;place-items:center;box-shadow:0 6px 20px rgba(10,40,44,.1);flex:none}
 
 /* sheet */
